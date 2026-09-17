@@ -893,23 +893,37 @@
     const s=String(v==null?'':v);
     return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
   }
-  function downloadCSV(rows, filename){
+  async function downloadCSV(rows, filename){
     const headers=['id','subject','customer','channel','priority','status','assignee','created_at','first_response_mins','resolution_hours'];
     const lines=[headers.join(',')].concat(rows.map(d=>[
       d.id, d.subject, d.customer, d.channel, d.priority, d.overdue?'Overdue':d.status, d.assignee,
       d.createdAt.toISOString(), d.firstResponseMins ?? '', d.resolutionHours ?? ''
     ].map(toCSVField).join(',')));
     const blob=new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+
+    if(window.claude && typeof window.claude.use==='function'){
+      try{
+        const downloads=await window.claude.use('downloads');
+        if(downloads){
+          await downloads.save({filename, data:blob});
+          return true;
+        }
+      }catch(err){
+        if(err && err.code==='declined') return false;
+        /* fall through to the plain browser download below */
+      }
+    }
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url; a.download=filename;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
+    return true;
   }
-  document.getElementById('exportInquiries').addEventListener('click', ()=>{
+  document.getElementById('exportInquiries').addEventListener('click', async ()=>{
     const rows=filteredData();
-    downloadCSV(rows, `inquiries-${new Date().toISOString().slice(0,10)}.csv`);
-    toast(`Downloaded ${rows.length} inquiries as CSV`);
+    const ok=await downloadCSV(rows, `inquiries-${new Date().toISOString().slice(0,10)}.csv`);
+    if(ok) toast(`Downloaded ${rows.length} inquiries as CSV`);
   });
 
   /* ---------------- Filters / search / table toggle ---------------- */
