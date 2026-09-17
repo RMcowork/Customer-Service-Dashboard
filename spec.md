@@ -4,8 +4,11 @@
 A dashboard for tracking customer inquiries, built for both mobile and desktop, with an elegant/neutral visual style and the ability to load data from multiple sources.
 
 ## Build approach
-1. **Prototype first** (current stage) — an interactive, self-contained HTML file (`prototype.html`) with generated sample data, used to validate layout, color, and UX before writing real application code.
+1. **Prototype first** (current stage) — an interactive, self-contained HTML file (`index.html`) with generated sample data, used to validate layout, color, and UX before writing real application code. Deployed via GitHub Pages for easy viewing/sharing.
 2. **Real code** (next stage, not started) — once the design is approved, rebuild as a proper app (tech stack TBD — React/Vite is the default recommendation) with real backend connectors replacing the demo-data stand-ins.
+
+## Deployment
+`index.html` is served directly by GitHub Pages from the `main` branch root — no build step. Pushing to `main` updates the live site (may take a minute to propagate).
 
 ## Data sources
 The dashboard should be able to load inquiry data from:
@@ -15,6 +18,8 @@ The dashboard should be able to load inquiry data from:
 - **Generic REST/JSON endpoint** — any URL returning a JSON array (or `{data: [...]}` / `{results: [...]}`) of inquiries.
 
 > In the prototype, the last three connectors are UI-complete (platform/URL/token fields, a "Connect" action) but load bundled demo data instead of calling a real endpoint, since there's no backend yet.
+
+See [practice.md](practice.md) for a running log of what's been built, and [CLAUDE.md](CLAUDE.md) for repo conventions.
 
 ## Core views
 - **Overview** — KPI tiles (total inquiries, open & pending, avg first response time, SLA compliance %), inquiry volume trend (last 30 days), inquiries-by-channel breakdown, team workload summary.
