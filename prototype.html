@@ -285,6 +285,7 @@
     </div>
     <div class="sidebar-foot">
       <button class="btn btn-primary btn-block" id="openConnectDesktop"></button>
+      <button class="btn btn-block" id="downloadDataDesktop"></button>
       <button class="btn btn-ghost btn-block" id="themeToggleDesktop"></button>
     </div>
   </nav>
@@ -298,6 +299,7 @@
       </div>
       <div class="topbar-actions">
         <button class="icon-btn" id="themeToggleMobile" title="Toggle theme"></button>
+        <button class="icon-btn" id="downloadDataTop" title="Download all data as CSV"></button>
         <button class="btn btn-primary" id="openConnectTop"><span id="icon-connect-top"></span><span class="connect-label">Connect data</span></button>
       </div>
     </header>
@@ -926,6 +928,13 @@
     if(ok) toast(`Downloaded ${rows.length} inquiries as CSV`);
   });
 
+  async function downloadAllData(){
+    const ok=await downloadCSV(DATA, `customer-inquiries-${new Date().toISOString().slice(0,10)}.csv`);
+    if(ok) toast(`Downloaded all ${DATA.length} inquiries as CSV`);
+  }
+  document.getElementById('downloadDataDesktop').addEventListener('click', downloadAllData);
+  document.getElementById('downloadDataTop').addEventListener('click', downloadAllData);
+
   /* ---------------- Filters / search / table toggle ---------------- */
   ['filterStatus','filterChannel','filterPriority','searchInput'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderInquiries);
@@ -950,6 +959,8 @@
   document.querySelectorAll('.nav-item[data-view="team"]').forEach(b=>b.innerHTML=ICONS.users+'<span>Team</span>');
   document.getElementById('bottomConnect').innerHTML=ICONS.link+'<span>Connect</span>';
   document.getElementById('openConnectDesktop').innerHTML=ICONS.link+'<span>&nbsp;Connect data</span>';
+  document.getElementById('downloadDataDesktop').innerHTML=ICONS.download+'<span>&nbsp;Download data</span>';
+  document.getElementById('downloadDataTop').innerHTML=ICONS.download;
   document.getElementById('closeModal').innerHTML=ICONS.close;
   setIcon('icon-search','search');
   setIcon('icon-connect-top','link');

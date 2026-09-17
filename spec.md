@@ -22,7 +22,9 @@ The dashboard should be able to load inquiry data from:
 - **Team** — per-agent workload: open inquiries, average resolution time.
 
 ## Data export
-The Inquiries view has a "Download CSV" button that exports whatever rows match the current filters/search (not necessarily the full dataset) as a `.csv` file, generated client-side (no server round-trip).
+- The Inquiries view has a "Download CSV" button that exports whatever rows match the current filters/search (not necessarily the full dataset).
+- A global "Download data" button (sidebar on desktop, icon in the top bar on mobile, next to "Connect data") exports the entire current dataset from any view.
+- Both generate the `.csv` client-side (no server round-trip) and use the artifact viewer's `downloads` capability when running as a Claude artifact, falling back to a plain browser download otherwise.
 
 ## Inquiry data model
 Each inquiry currently carries: `id`, `subject`, `customer`, `channel` (Email/Chat/Phone/Social), `priority` (Urgent/High/Medium/Low), `status` (Open/Pending/Resolved/Closed), `assignee`, `createdAt`, `firstResponseMins`, `resolutionHours`, `overdue` (SLA breach flag).
