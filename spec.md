@@ -18,8 +18,11 @@ The dashboard should be able to load inquiry data from:
 
 ## Core views
 - **Overview** — KPI tiles (total inquiries, open & pending, avg first response time, SLA compliance %), inquiry volume trend (last 30 days), inquiries-by-channel breakdown, team workload summary.
-- **Inquiries** — searchable, filterable (status / channel / priority) list of individual inquiries. Table on desktop, cards on mobile.
+- **Inquiries** — searchable, filterable (status / channel / priority) list of individual inquiries. Table on desktop, cards on mobile. **Download CSV** exports the currently filtered rows.
 - **Team** — per-agent workload: open inquiries, average resolution time.
+
+## Data export
+The Inquiries view has a "Download CSV" button that exports whatever rows match the current filters/search (not necessarily the full dataset) as a `.csv` file, generated client-side (no server round-trip).
 
 ## Inquiry data model
 Each inquiry currently carries: `id`, `subject`, `customer`, `channel` (Email/Chat/Phone/Social), `priority` (Urgent/High/Medium/Low), `status` (Open/Pending/Resolved/Closed), `assignee`, `createdAt`, `firstResponseMins`, `resolutionHours`, `overdue` (SLA breach flag).

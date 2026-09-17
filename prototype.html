@@ -357,6 +357,7 @@
           <option>Urgent</option><option>High</option><option>Medium</option><option>Low</option>
         </select>
         <span class="result-count" id="resultCount"></span>
+        <button class="btn" id="exportInquiries"><span id="icon-export"></span><span>&nbsp;Download CSV</span></button>
       </div>
       <table class="inq-table">
         <thead><tr>
@@ -482,7 +483,8 @@
     moon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>',
     close:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
     upload:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
-    bolt:'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-14h-7l0-6z"/></svg>'
+    bolt:'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-14h-7l0-6z"/></svg>',
+    download:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
   };
   const setIcon=(id,name)=>{const el=document.getElementById(id); if(el) el.innerHTML=ICONS[name];};
 
@@ -886,6 +888,30 @@
     }, 900);
   });
 
+  /* ---------------- Export ---------------- */
+  function toCSVField(v){
+    const s=String(v==null?'':v);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }
+  function downloadCSV(rows, filename){
+    const headers=['id','subject','customer','channel','priority','status','assignee','created_at','first_response_mins','resolution_hours'];
+    const lines=[headers.join(',')].concat(rows.map(d=>[
+      d.id, d.subject, d.customer, d.channel, d.priority, d.overdue?'Overdue':d.status, d.assignee,
+      d.createdAt.toISOString(), d.firstResponseMins ?? '', d.resolutionHours ?? ''
+    ].map(toCSVField).join(',')));
+    const blob=new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+  document.getElementById('exportInquiries').addEventListener('click', ()=>{
+    const rows=filteredData();
+    downloadCSV(rows, `inquiries-${new Date().toISOString().slice(0,10)}.csv`);
+    toast(`Downloaded ${rows.length} inquiries as CSV`);
+  });
+
   /* ---------------- Filters / search / table toggle ---------------- */
   ['filterStatus','filterChannel','filterPriority','searchInput'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderInquiries);
@@ -914,6 +940,7 @@
   setIcon('icon-search','search');
   setIcon('icon-connect-top','link');
   setIcon('icon-upload','upload');
+  setIcon('icon-export','download');
   applyTheme(currentTheme());
   setIcon('themeToggleMobile', (document.documentElement.getAttribute('data-theme')==='dark' || (!currentTheme() && window.matchMedia('(prefers-color-scheme: dark)').matches))?'sun':'moon');
 
