@@ -2,6 +2,9 @@
 
 A running log of what's been built in this repo and why — most recent first. For current scope/decisions see [spec.md](spec.md); for repo conventions see [CLAUDE.md](CLAUDE.md).
 
+## 2026-09-23 — Spec pass: token handling and API quota
+- Recorded the decision that a token can't be hardcoded securely in a public static page (proxy recommended), and flagged that minute-by-minute polling can burn through Airtable's monthly API-call limits on lower plans.
+
 ## 2026-09-23 — Auto-refresh every minute
 - Airtable sources now update every 60s in the background. Quiet by design (spinner in the Source bar only, no card pulse or toast), pauses while the tab is hidden, never overlaps loads, stops on 401/403 or 3 consecutive failures while keeping the last good data. On/off toggle with a live countdown, preference remembered. Disconnect stops it.
 - Tested with a mocked API: countdown, natural 60s firing across three cycles, quiet mode, off/on, 401 stop and recovery, disconnect.

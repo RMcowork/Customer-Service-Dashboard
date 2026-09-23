@@ -69,6 +69,8 @@ Each inquiry currently carries: `id`, `subject`, `customer`, `channel` (Email/Ch
 ## Open decisions
 - Final tech stack for the real-code stage.
 - Real backend/auth design for the Google Sheets, helpdesk API, and REST connectors.
-- Airtable is browser-direct today, so anyone using the page must paste their own token. A small proxy/backend would let a shared deployment hold the token server-side; not built.
+- **Token handling for a no-paste experience.** Airtable is browser-direct today, so every viewer pastes their own token; a token can't be hardcoded securely in a public static page (the repo and site are public, and build-time injection still ships the value in the served file). The recommended path is a small server-side proxy (e.g. a Cloudflare Worker holding a read-only token as a secret, with a login such as Cloudflare Access in front, since the data is customer data), with the base ID and table pre-filled. Not built. The base ID itself is an identifier, not a secret, and can be hardcoded.
+- **Airtable API quota.** Auto-refresh polls once a minute, and each pull is one request per 100 records. Airtable plans may cap monthly API calls (the free tier's cap is low, so a minute-by-minute poll of a multi-page table could exhaust it); check the plan's limit and consider a longer default interval, refresh-only-when-visible (already true), or a proxy that caches.
+- **Polling vs. push.** Live updates use polling. Airtable webhooks would avoid the quota cost but need a server to receive them.
 - Airtable connector has only been tested against a mocked API; needs a run against a live base.
 - Any design changes from reviewing the prototype.
