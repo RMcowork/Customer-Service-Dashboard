@@ -19,11 +19,23 @@ The dashboard should be able to load inquiry data from:
 - **Generic REST/JSON endpoint** — any URL returning a JSON array (or `{data: [...]}` / `{results: [...]}`) of inquiries.
 
 ### Field normalization (CSV and Airtable)
-Real data is never padded with made-up values. Status text is mapped to Open/Pending/Resolved/Closed (e.g. "In progress" → Pending, "Done" → Resolved), priority to Urgent/High/Medium/Low, channel to Email/Chat/Phone/Social/Other; anything unrecognized falls back to Open / Medium / Other. First-response and resolution times come only from real fields (explicit numbers, or timestamps relative to the created date) and show "—" when absent. "Overdue" uses an explicit field if present, otherwise "open for more than 4 days". Assignees are taken from the data, not a fixed list. While an Airtable pull is running, the Source bar animates (spinner, progress bar, live record count) and the dashboard cards pulse, then fade in on completion (respects reduced-motion). A "Source" bar under the top bar shows where the data came from, the record count, and any fields that fell back to defaults. All data-derived text is HTML-escaped before rendering.
+Real data is never padded with made-up values. Status text is mapped to Open/Pending/Resolved/Closed (e.g. "In progress" → Pending, "Done" → Resolved), priority to Urgent/High/Medium/Low, channel to Email/Chat/Phone/Social/Other; anything unrecognized falls back to Open / Medium / Other. First-response and resolution times come only from real fields (explicit numbers, or timestamps relative to the created date) and show "—" when absent. "Overdue" uses an explicit field if present, otherwise "open for more than 4 days". Assignees are taken from the data, not a fixed list. A "Source" bar under the top bar shows where the data came from, the record count, freshness, and any fields that fell back to defaults.
 
 > In the prototype, the Google Sheets, Helpdesk API and REST connectors are UI-complete (platform/URL/token fields, a "Connect" action) but load bundled demo data instead of calling a real endpoint, since there's no backend yet.
 
 See [practice.md](practice.md) for a running log of what's been built, and [CLAUDE.md](CLAUDE.md) for repo conventions.
+
+## Loading and refresh behavior
+- While an Airtable pull is running (first connect or Refresh), the Source bar shows a spinning icon, a sliding progress bar and a live "N records so far" count; the KPI/chart cards pulse, and the Connect button shows a spinner.
+- When the data lands, the cards fade in. A load is held visible for at least 0.7s so fast responses don't just flash.
+- All of this is disabled under `prefers-reduced-motion`.
+- Source bar actions for Airtable: **Refresh** (re-pulls using the in-memory token) and **Disconnect** (drops the token and returns to demo data).
+
+## Security and privacy
+- The repo and GitHub Pages site are public: no secrets in code, commits, logs or storage. The Airtable token is entered by the viewer, kept only in memory, and cleared from the form after connecting.
+- Only non-secret Airtable settings (base ID, table, view, field mapping) are saved to localStorage.
+- Inquiry text is customer-authored, so every data-derived string is HTML-escaped before rendering.
+- Network calls go only to the chosen data source (currently `api.airtable.com`); no analytics or third-party requests.
 
 ## Core views
 - **Overview** — KPI tiles (total inquiries, open & pending, avg first response time, SLA compliance %), inquiry volume trend (last 30 days), inquiries-by-channel breakdown, team workload summary.
@@ -36,15 +48,26 @@ See [practice.md](practice.md) for a running log of what's been built, and [CLAU
 - Both generate the `.csv` client-side (no server round-trip) and use the artifact viewer's `downloads` capability when running as a Claude artifact, falling back to a plain browser download otherwise.
 
 ## Inquiry data model
-Each inquiry currently carries: `id`, `subject`, `customer`, `channel` (Email/Chat/Phone/Social), `priority` (Urgent/High/Medium/Low), `status` (Open/Pending/Resolved/Closed), `assignee`, `createdAt`, `firstResponseMins`, `resolutionHours`, `overdue` (SLA breach flag).
+Each inquiry currently carries: `id`, `subject`, `customer`, `channel` (Email/Chat/Phone/Social/Other), `priority` (Urgent/High/Medium/Low), `status` (Open/Pending/Resolved/Closed), `assignee`, `createdAt`, `firstResponseMins`, `resolutionHours`, `overdue` (SLA breach flag). Response and resolution times are `null` when the source has no such data.
 
 ## Design
 - Responsive: sidebar + top bar navigation on desktop, bottom tab bar on mobile (breakpoint 700px).
 - Light and dark themes (manual toggle + OS preference), built on the validated dataviz color palette (colorblind-safe categorical/status colors).
 - No external UI framework — plain HTML/CSS/JS.
+- Motion is functional only (loading and refresh feedback) and respects reduced-motion settings.
+
+## Connector status
+| Source | Status |
+|---|---|
+| CSV upload | Real (client-side parse) |
+| Airtable | Real (browser-direct, token in memory) |
+| Google Sheets | UI only, loads demo data |
+| Helpdesk API (Zendesk/Intercom/HubSpot) | UI only, loads demo data |
+| REST / JSON | UI only, loads demo data |
 
 ## Open decisions
 - Final tech stack for the real-code stage.
 - Real backend/auth design for the Google Sheets, helpdesk API, and REST connectors.
 - Airtable is browser-direct today, so anyone using the page must paste their own token. A small proxy/backend would let a shared deployment hold the token server-side; not built.
+- Airtable connector has only been tested against a mocked API; needs a run against a live base.
 - Any design changes from reviewing the prototype.
