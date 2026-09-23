@@ -2,6 +2,9 @@
 
 A running log of what's been built in this repo and why — most recent first. For current scope/decisions see [spec.md](spec.md); for repo conventions see [CLAUDE.md](CLAUDE.md).
 
+## 2026-09-23 — Refresh animation
+- While pulling from Airtable (connect or Refresh), the Source bar shows a spinning icon, a sliding progress bar and a live "N records so far" count; KPI/chart cards pulse, then fade in when the new data lands. The Connect button shows a spinner too. Loads are held visible for at least 0.7s so fast responses don't just flash. Animations are disabled under `prefers-reduced-motion`. Tested with a mocked, slowed Airtable API.
+
 ## 2026-09-23 — Airtable connector
 - Added a real Airtable connector (new "Airtable" tab in Connect data): token + base/URL + table + optional view, paginated fetch straight from api.airtable.com, auto field detection with optional manual mapping, friendly errors for 401/403/404/429/network, Refresh and Disconnect.
 - Token handling: password field, held in memory only, cleared after connecting, never stored or committed (repo is public). A token pasted into chat was deliberately *not* entered into the page by Claude; the user pastes it themselves.

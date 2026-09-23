@@ -217,6 +217,19 @@
   .hint.error{color:var(--status-critical);}
   .source-bar{display:flex; align-items:center; gap:6px 10px; flex-wrap:wrap; padding:9px 28px; font-size:12.5px; color:var(--text-muted); border-bottom:1px solid var(--border);}
   .source-bar b{color:var(--text-secondary); font-weight:600;}
+  .source-bar{position:relative;}
+  .spin{display:inline-flex; animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .load-bar{position:absolute; left:0; right:0; bottom:-1px; height:2px; overflow:hidden;}
+  .load-bar::after{content:''; position:absolute; top:0; bottom:0; left:0; width:35%; background:var(--series-1); border-radius:2px; animation:slide 1.1s ease-in-out infinite;}
+  @keyframes slide{from{transform:translateX(-100%);} to{transform:translateX(300%);}}
+  @keyframes pulse{50%{opacity:.55;}}
+  @keyframes fadein{from{opacity:.3; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  body.loading .kpi, body.loading .chart-card{animation:pulse 1.2s ease-in-out infinite;}
+  body.refreshed .kpi, body.refreshed .chart-card, body.refreshed .inq-card, body.refreshed .agent-row, body.refreshed .inq-table tbody tr{animation:fadein .5s ease both;}
+  @media (prefers-reduced-motion:reduce){
+    .spin, .load-bar::after, body.loading .kpi, body.loading .chart-card, body.refreshed .kpi, body.refreshed .chart-card, body.refreshed .inq-card, body.refreshed .agent-row, body.refreshed .inq-table tbody tr{animation:none;}
+  }
   .tab-btn.active{background:var(--surface-1); color:var(--text-primary); box-shadow:var(--shadow-1);}
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
@@ -531,6 +544,7 @@
     close:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
     upload:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
     bolt:'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-14h-7l0-6z"/></svg>',
+    refresh:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
     download:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
   };
   const setIcon=(id,name)=>{const el=document.getElementById(id); if(el) el.innerHTML=ICONS[name];};
@@ -578,9 +592,19 @@
   let SOURCE={label:'Demo data (generated)', at:new Date()};
 
   function setSource(src){ SOURCE=Object.assign({at:new Date()},src); renderSourceBar(); }
+  let LOADING=null;
+  function setLoading(state){
+    LOADING=state; document.body.classList.toggle('loading',!!state); renderSourceBar();
+  }
   function renderSourceBar(){
     const bar=document.getElementById('sourceBar'); bar.textContent='';
     const add=(txt,tag)=>{ const el=document.createElement(tag||'span'); el.textContent=txt; bar.appendChild(el); };
+    if(LOADING){
+      const sp=document.createElement('span'); sp.className='spin'; sp.innerHTML=ICONS.refresh; bar.appendChild(sp);
+      add(LOADING.label+(LOADING.count?' · '+LOADING.count+' records so far':'…'),'b');
+      const lb=document.createElement('div'); lb.className='load-bar'; bar.appendChild(lb);
+      return;
+    }
     add('Source:'); add(SOURCE.label,'b'); add('· '+DATA.length+' records');
     add('· updated '+SOURCE.at.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}));
     if(SOURCE.note) add('· '+SOURCE.note);
@@ -1053,11 +1077,14 @@
   }
   async function connectAirtable(cfg, silent){
     const status=document.getElementById('atStatus');
-    const say=(msg,isErr)=>{ if(silent){ toast(msg); } else { status.textContent=msg; status.classList.toggle('error',!!isErr); } };
+    const say=(msg,isErr)=>{ if(silent){ if(isErr) toast(msg); } else { status.textContent=msg; status.classList.toggle('error',!!isErr); } };
     say('Connecting to Airtable…');
+    const t0=Date.now();
+    setLoading({label:silent?'Refreshing from Airtable':'Pulling from Airtable'});
     try{
-      const {records,truncated}=await fetchAirtableRecords(cfg, n=>say('Loaded '+n+' records…'));
+      const {records,truncated}=await fetchAirtableRecords(cfg, n=>{ LOADING.count=n; renderSourceBar(); say('Loaded '+n+' records…'); });
       if(!records.length) throw new Error('That table returned no records.');
+      const wait=700-(Date.now()-t0); if(wait>0) await new Promise(r=>setTimeout(r,wait));
       const rows=airtableRecordsToRows(records);
       const result=rowsToInquiries(rows, cfg.mapping);
       DATA=result.inquiries;
@@ -1072,11 +1099,15 @@
         refresh:()=>connectAirtable(cfg,true),
         disconnect:()=>{ cfg.token=''; DATA=genInquiries(64,30); setSource({label:'Demo data (generated)'}); renderAll(); toast('Disconnected from Airtable'); }
       });
+      setLoading(null);
       renderAll();
+      document.body.classList.add('refreshed');
+      setTimeout(()=>document.body.classList.remove('refreshed'),700);
       if(!silent){ closeModal(); toast('Connected to Airtable — loaded '+DATA.length+' inquiries'); }
       else toast('Refreshed from Airtable — '+DATA.length+' inquiries');
       return true;
     }catch(err){
+      setLoading(null);
       say(err.message,true);
       return false;
     }
@@ -1142,9 +1173,9 @@
         cfg=Object.assign(parseAirtableRef(document.getElementById('atBase').value, document.getElementById('atTable').value, document.getElementById('atView').value), {token, mapping:airtableMapping()});
       }catch(err){ status.textContent=err.message; status.classList.add('error'); return; }
       const btn=document.getElementById('doConnect');
-      btn.disabled=true;
+      btn.disabled=true; btn.innerHTML='<span class="spin">'+ICONS.refresh+'</span>&nbsp;Connecting…';
       connectAirtable(cfg,false).then(ok=>{
-        btn.disabled=false;
+        btn.disabled=false; btn.textContent='Connect';
         if(ok){ tokenEl.value=''; saveAirtableForm(cfg); status.textContent=''; }
       });
       return;
