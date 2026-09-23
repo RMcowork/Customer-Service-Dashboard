@@ -2,6 +2,10 @@
 
 A running log of what's been built in this repo and why — most recent first. For current scope/decisions see [spec.md](spec.md); for repo conventions see [CLAUDE.md](CLAUDE.md).
 
+## 2026-09-23 — Auto-refresh every minute
+- Airtable sources now update every 60s in the background. Quiet by design (spinner in the Source bar only, no card pulse or toast), pauses while the tab is hidden, never overlaps loads, stops on 401/403 or 3 consecutive failures while keeping the last good data. On/off toggle with a live countdown, preference remembered. Disconnect stops it.
+- Tested with a mocked API: countdown, natural 60s firing across three cycles, quiet mode, off/on, 401 stop and recovery, disconnect.
+
 ## 2026-09-23 — Refresh animation
 - While pulling from Airtable (connect or Refresh), the Source bar shows a spinning icon, a sliding progress bar and a live "N records so far" count; KPI/chart cards pulse, then fade in when the new data lands. The Connect button shows a spinner too. Loads are held visible for at least 0.7s so fast responses don't just flash. Animations are disabled under `prefers-reduced-motion`. Tested with a mocked, slowed Airtable API.
 

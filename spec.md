@@ -29,13 +29,14 @@ See [practice.md](practice.md) for a running log of what's been built, and [CLAU
 - While an Airtable pull is running (first connect or Refresh), the Source bar shows a spinning icon, a sliding progress bar and a live "N records so far" count; the KPI/chart cards pulse, and the Connect button shows a spinner.
 - When the data lands, the cards fade in. A load is held visible for at least 0.7s so fast responses don't just flash.
 - All of this is disabled under `prefers-reduced-motion`.
+- **Auto-refresh:** a connected Airtable source re-pulls every 60 seconds. Background updates are quiet (small spinner and "Updating…" in the Source bar only: no card pulse, no toast). The timer pauses while the browser tab is hidden and catches up immediately when it becomes visible, never overlaps a load in progress, and resets after any manual Refresh. A toggle in the Source bar shows "Auto-refresh on · next in Ns" and can turn it off (preference saved in localStorage). If the token is rejected (401/403) or three updates in a row fail, auto-refresh stops, the last good data stays on screen, and the toggle becomes "stopped · retry". Only live sources (Airtable) auto-refresh; CSV and demo data don't. Disconnect stops the timer.
 - Source bar actions for Airtable: **Refresh** (re-pulls using the in-memory token) and **Disconnect** (drops the token and returns to demo data).
 
 ## Security and privacy
 - The repo and GitHub Pages site are public: no secrets in code, commits, logs or storage. The Airtable token is entered by the viewer, kept only in memory, and cleared from the form after connecting.
 - Only non-secret Airtable settings (base ID, table, view, field mapping) are saved to localStorage.
 - Inquiry text is customer-authored, so every data-derived string is HTML-escaped before rendering.
-- Network calls go only to the chosen data source (currently `api.airtable.com`); no analytics or third-party requests.
+- Network calls go only to the chosen data source (currently `api.airtable.com`); no analytics or third-party requests. With auto-refresh on, that is roughly one pull per minute per open tab (Airtable allows 5 requests/second per base, and a 5,000-record table needs at most 50 requests per pull).
 
 ## Core views
 - **Overview** — KPI tiles (total inquiries, open & pending, avg first response time, SLA compliance %), inquiry volume trend (last 30 days), inquiries-by-channel breakdown, team workload summary.

@@ -10,7 +10,7 @@ A dashboard for tracking customer inquiries — volume trends, SLA/response perf
 
 **Data sources (UI mocked, not yet wired to live backends):**
 - CSV upload — actually parses the file client-side
-- **Airtable — live**: paste a personal access token (`data.records:read`), base ID/URL and table in *Connect data → Airtable*. The token stays in your browser tab's memory and is never saved.
+- **Airtable — live**: paste a personal access token (`data.records:read`), base ID/URL and table in *Connect data → Airtable*. The token stays in your browser tab's memory and is never saved. Data auto-refreshes every 60 seconds (toggle in the Source bar).
 - Google Sheets, Helpdesk APIs (Zendesk / Intercom / HubSpot), generic REST/JSON — connect flow loads demo data as a stand-in until a real backend exists
 
 **Views:** Overview (KPIs, volume trend, channel breakdown, workload), Inquiries (filterable list/table), Team (agent workload).

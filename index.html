@@ -132,7 +132,7 @@
   .chart-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap;}
   .chart-title{font-size:14px; font-weight:700;}
   .chart-sub{font-size:12px; color:var(--text-muted);}
-  .link-btn{background:none;border:none;color:var(--series-1);font-size:12px;font-weight:600;cursor:pointer;padding:0;}
+  .link-btn{background:none;border:none;color:var(--series-1);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-variant-numeric:tabular-nums;}
   .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px;}
   .legend-item{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary);}
   .legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
@@ -591,10 +591,38 @@
   let DATA=genInquiries(64,30);
   let SOURCE={label:'Demo data (generated)', at:new Date()};
 
-  function setSource(src){ SOURCE=Object.assign({at:new Date()},src); renderSourceBar(); }
+  function setSource(src){
+    SOURCE=Object.assign({at:new Date()},src);
+    if(!src.autoCapable){ stopTicker(); autoRunner=null; }
+    renderSourceBar();
+  }
   let LOADING=null;
   function setLoading(state){
-    LOADING=state; document.body.classList.toggle('loading',!!state); renderSourceBar();
+    LOADING=state; document.body.classList.toggle('loading',!!state&&!state.quiet); renderSourceBar();
+  }
+
+  /* ---- Auto-refresh (live sources only) ---- */
+  const AUTO_MS=60000, AUTO_PREF='csd-auto';
+  let autoState=(()=>{ try{ return localStorage.getItem(AUTO_PREF)==='0'?'off':'on'; }catch(e){ return 'on'; } })();
+  let autoTimer=null, nextAt=0, failCount=0, autoRunner=null;
+  function stopTicker(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } }
+  function startTicker(){ stopTicker(); nextAt=Date.now()+AUTO_MS; autoTimer=setInterval(tick,1000); }
+  function updateAutoLabel(){
+    const b=document.getElementById('autoToggle'); if(!b) return;
+    b.textContent = autoState==='on' ? 'Auto-refresh on · next in '+Math.max(0,Math.ceil((nextAt-Date.now())/1000))+'s'
+                  : autoState==='error' ? 'Auto-refresh stopped · retry' : 'Auto-refresh off';
+  }
+  async function tick(){
+    updateAutoLabel();
+    if(autoState!=='on'||document.hidden||LOADING||!autoRunner) return;
+    if(Date.now()>=nextAt){ nextAt=Date.now()+AUTO_MS; await autoRunner(); }
+  }
+  function toggleAuto(){
+    const turningOn=autoState!=='on';
+    autoState=turningOn?'on':'off';
+    try{ localStorage.setItem(AUTO_PREF, turningOn?'1':'0'); }catch(e){}
+    if(turningOn){ failCount=0; startTicker(); nextAt=Date.now(); } else stopTicker();
+    updateAutoLabel();
   }
   function renderSourceBar(){
     const bar=document.getElementById('sourceBar'); bar.textContent='';
@@ -610,6 +638,7 @@
     if(SOURCE.note) add('· '+SOURCE.note);
     const btn=(txt,fn)=>{ const b=document.createElement('button'); b.className='link-btn'; b.textContent=txt; b.addEventListener('click',fn); bar.appendChild(b); };
     if(SOURCE.refresh) btn('Refresh',SOURCE.refresh);
+    if(SOURCE.autoCapable){ btn('',toggleAuto); bar.lastChild.id='autoToggle'; updateAutoLabel(); }
     if(SOURCE.disconnect) btn('Disconnect',SOURCE.disconnect);
   }
 
@@ -1038,10 +1067,10 @@
       if(offset) p.set('offset',offset);
       let res;
       try{ res=await fetch(url0+'?'+p, {headers:{Authorization:'Bearer '+cfg.token}}); }
-      catch(e){ throw new Error(airtableErrorMessage('network')); }
+      catch(e){ throw Object.assign(new Error(airtableErrorMessage('network')),{status:'network'}); }
       if(!res.ok){
         let detail=''; try{ const j=await res.json(); detail=(j&&j.error&&(j.error.message||j.error.type))||''; }catch(e){}
-        throw new Error(airtableErrorMessage(res.status, detail));
+        throw Object.assign(new Error(airtableErrorMessage(res.status, detail)),{status:res.status});
       }
       const json=await res.json();
       records.push(...(json.records||[]));
@@ -1075,16 +1104,16 @@
     const out={}; Object.keys(ids).forEach(n=>{ const v=document.getElementById(ids[n]).value.trim(); if(v) out[n]=v; });
     return out;
   }
-  async function connectAirtable(cfg, silent){
+  async function connectAirtable(cfg, silent, auto){
     const status=document.getElementById('atStatus');
     const say=(msg,isErr)=>{ if(silent){ if(isErr) toast(msg); } else { status.textContent=msg; status.classList.toggle('error',!!isErr); } };
     say('Connecting to Airtable…');
     const t0=Date.now();
-    setLoading({label:silent?'Refreshing from Airtable':'Pulling from Airtable'});
+    setLoading({label:auto?'Updating from Airtable':(silent?'Refreshing from Airtable':'Pulling from Airtable'), quiet:!!auto});
     try{
       const {records,truncated}=await fetchAirtableRecords(cfg, n=>{ LOADING.count=n; renderSourceBar(); say('Loaded '+n+' records…'); });
       if(!records.length) throw new Error('That table returned no records.');
-      const wait=700-(Date.now()-t0); if(wait>0) await new Promise(r=>setTimeout(r,wait));
+      const wait=700-(Date.now()-t0); if(!auto&&wait>0) await new Promise(r=>setTimeout(r,wait));
       const rows=airtableRecordsToRows(records);
       const result=rowsToInquiries(rows, cfg.mapping);
       DATA=result.inquiries;
@@ -1096,19 +1125,33 @@
       if(truncated) notes.push('showing first '+AT_MAX_RECORDS+' records');
       setSource({
         label:'Airtable · '+cfg.table, note:notes.join('; '),
+        autoCapable:true,
         refresh:()=>connectAirtable(cfg,true),
         disconnect:()=>{ cfg.token=''; DATA=genInquiries(64,30); setSource({label:'Demo data (generated)'}); renderAll(); toast('Disconnected from Airtable'); }
       });
       setLoading(null);
       renderAll();
-      document.body.classList.add('refreshed');
-      setTimeout(()=>document.body.classList.remove('refreshed'),700);
-      if(!silent){ closeModal(); toast('Connected to Airtable — loaded '+DATA.length+' inquiries'); }
-      else toast('Refreshed from Airtable — '+DATA.length+' inquiries');
+      failCount=0;
+      autoRunner=()=>connectAirtable(cfg,true,true);
+      if(autoState==='error') autoState='on';
+      if(autoState==='on') startTicker();
+      updateAutoLabel();
+      if(!auto){
+        document.body.classList.add('refreshed');
+        setTimeout(()=>document.body.classList.remove('refreshed'),700);
+        if(!silent){ closeModal(); toast('Connected to Airtable — loaded '+DATA.length+' inquiries'); }
+        else toast('Refreshed from Airtable — '+DATA.length+' inquiries');
+      }
       return true;
     }catch(err){
       setLoading(null);
-      say(err.message,true);
+      if(auto){
+        failCount++;
+        if(err.status===401||err.status===403||failCount>=3){
+          autoState='error'; stopTicker(); renderSourceBar();
+          toast('Auto-refresh stopped: '+err.message);
+        }
+      } else say(err.message,true);
       return false;
     }
   }
