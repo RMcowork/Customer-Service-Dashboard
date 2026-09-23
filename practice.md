@@ -2,6 +2,15 @@
 
 A running log of what's been built in this repo and why — most recent first. For current scope/decisions see [spec.md](spec.md); for repo conventions see [CLAUDE.md](CLAUDE.md).
 
+## 2026-09-23 — Airtable connector
+- Added a real Airtable connector (new "Airtable" tab in Connect data): token + base/URL + table + optional view, paginated fetch straight from api.airtable.com, auto field detection with optional manual mapping, friendly errors for 401/403/404/429/network, Refresh and Disconnect.
+- Token handling: password field, held in memory only, cleared after connecting, never stored or committed (repo is public). A token pasted into chat was deliberately *not* entered into the page by Claude; the user pastes it themselves.
+- Made real-data paths honest: replaced the demo-only CSV shortcuts (random status/channel/assignee, fake response times, fake overdue) with real-field mapping and "—" when data is missing; assignees now come from the data; added an "Other" channel.
+- Security hardening found while doing this: inquiry text is customer-authored, so all data-derived text is now HTML-escaped (previously interpolated raw into `innerHTML`).
+- Replaced the regex CSV splitter (dropped empty cells and shifted columns) with a proper quoted-field parser.
+- Added a "Source" bar showing origin, record count, freshness and any defaulted fields.
+- Tested against a mocked Airtable API (pagination, auth header, XSS payload, error codes) at desktop and mobile widths. Not yet run against a live Airtable base.
+
 ## 2026-09-17 — Docs pass + GitHub Pages
 - Renamed `prototype.html` → `index.html` so GitHub Pages can serve it directly from the repo root.
 - Added `CLAUDE.md` (repo conventions) and this file.

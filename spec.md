@@ -13,11 +13,15 @@ A dashboard for tracking customer inquiries, built for both mobile and desktop, 
 ## Data sources
 The dashboard should be able to load inquiry data from:
 - **CSV / Excel upload** — user drags in an exported file; parsed client-side. *(Implemented for real in the prototype.)*
+- **Airtable** — *(Implemented for real.)* Reads a table via the Airtable REST API directly from the browser. The user supplies a personal access token (`data.records:read`), base ID (or a pasted Airtable URL), table name/ID, and optional view. Pages through all records (cap 5,000). Fields are auto-detected by name (subject/title, customer/name, channel, status, priority, assignee, created date, plus optional first-response/resolution/overdue fields) with an optional manual field mapping. The token is held in memory only — never saved, never committed — and is cleared from the form after connecting; a Refresh button re-uses it for the session and Disconnect drops it. Base ID, table, view and mapping (not the token) are remembered in localStorage. Linked-record fields come back as record IDs, so a lookup field is needed for names. Airtable calls work on the GitHub Pages site or a local file; the Claude artifact preview blocks outbound requests.
 - **Google Sheets** — pull rows live from a shared sheet.
 - **Helpdesk API** — Zendesk, Intercom, or HubSpot Service Hub.
 - **Generic REST/JSON endpoint** — any URL returning a JSON array (or `{data: [...]}` / `{results: [...]}`) of inquiries.
 
-> In the prototype, the last three connectors are UI-complete (platform/URL/token fields, a "Connect" action) but load bundled demo data instead of calling a real endpoint, since there's no backend yet.
+### Field normalization (CSV and Airtable)
+Real data is never padded with made-up values. Status text is mapped to Open/Pending/Resolved/Closed (e.g. "In progress" → Pending, "Done" → Resolved), priority to Urgent/High/Medium/Low, channel to Email/Chat/Phone/Social/Other; anything unrecognized falls back to Open / Medium / Other. First-response and resolution times come only from real fields (explicit numbers, or timestamps relative to the created date) and show "—" when absent. "Overdue" uses an explicit field if present, otherwise "open for more than 4 days". Assignees are taken from the data, not a fixed list. A "Source" bar under the top bar shows where the data came from, the record count, and any fields that fell back to defaults. All data-derived text is HTML-escaped before rendering.
+
+> In the prototype, the Google Sheets, Helpdesk API and REST connectors are UI-complete (platform/URL/token fields, a "Connect" action) but load bundled demo data instead of calling a real endpoint, since there's no backend yet.
 
 See [practice.md](practice.md) for a running log of what's been built, and [CLAUDE.md](CLAUDE.md) for repo conventions.
 
@@ -42,4 +46,5 @@ Each inquiry currently carries: `id`, `subject`, `customer`, `channel` (Email/Ch
 ## Open decisions
 - Final tech stack for the real-code stage.
 - Real backend/auth design for the Google Sheets, helpdesk API, and REST connectors.
+- Airtable is browser-direct today, so anyone using the page must paste their own token. A small proxy/backend would let a shared deployment hold the token server-side; not built.
 - Any design changes from reviewing the prototype.

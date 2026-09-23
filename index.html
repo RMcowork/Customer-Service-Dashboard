@@ -209,8 +209,14 @@
   .modal-head{display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border);}
   .modal-head h2{font-size:16px; margin:0;}
   .modal-body{padding:18px 20px; overflow-y:auto;}
-  .tabs{display:flex; gap:4px; background:var(--surface-2); border-radius:999px; padding:4px; margin-bottom:16px;}
-  .tab-btn{flex:1; border:none; background:none; padding:8px 6px; border-radius:999px; font-size:12px; font-weight:700; color:var(--text-secondary); cursor:pointer;}
+  .tabs{display:grid; grid-template-columns:repeat(3,1fr); gap:4px; background:var(--surface-2); border-radius:var(--radius-md); padding:4px; margin-bottom:16px;}
+  .tab-btn{border:none; background:none; padding:8px 6px; border-radius:var(--radius-sm); font-size:12px; font-weight:700; color:var(--text-secondary); cursor:pointer;}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  details.mapping{margin-bottom:12px;}
+  details.mapping summary{cursor:pointer; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:8px;}
+  .hint.error{color:var(--status-critical);}
+  .source-bar{display:flex; align-items:center; gap:6px 10px; flex-wrap:wrap; padding:9px 28px; font-size:12.5px; color:var(--text-muted); border-bottom:1px solid var(--border);}
+  .source-bar b{color:var(--text-secondary); font-weight:600;}
   .tab-btn.active{background:var(--surface-1); color:var(--text-primary); box-shadow:var(--shadow-1);}
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
@@ -250,6 +256,7 @@
     .topbar h1{font-size:16.5px;}
     .search{max-width:none; order:3; flex-basis:100%; margin-top:2px;}
     #openConnectTop{display:none;}
+    .source-bar{padding:8px 16px;}
     .view{padding:16px 16px 24px;}
     .kpi-row{grid-template-columns:repeat(2,1fr); gap:10px;}
     .kpi-value{font-size:21px;}
@@ -303,6 +310,7 @@
         <button class="btn btn-primary" id="openConnectTop"><span id="icon-connect-top"></span><span class="connect-label">Connect data</span></button>
       </div>
     </header>
+    <div class="source-bar" id="sourceBar" role="status"></div>
 
     <!-- OVERVIEW -->
     <main class="view active" id="view-overview">
@@ -352,7 +360,7 @@
         </select>
         <select class="chip-select" id="filterChannel">
           <option value="">All channels</option>
-          <option>Email</option><option>Chat</option><option>Phone</option><option>Social</option>
+          <option>Email</option><option>Chat</option><option>Phone</option><option>Social</option><option>Other</option>
         </select>
         <select class="chip-select" id="filterPriority">
           <option value="">All priorities</option>
@@ -403,6 +411,7 @@
     <div class="modal-body">
       <div class="tabs">
         <button class="tab-btn active" data-tab="upload">Upload file</button>
+        <button class="tab-btn" data-tab="airtable">Airtable</button>
         <button class="tab-btn" data-tab="sheets">Google Sheets</button>
         <button class="tab-btn" data-tab="helpdesk">Helpdesk API</button>
         <button class="tab-btn" data-tab="rest">REST / JSON</button>
@@ -414,8 +423,44 @@
           <div><strong>Drop a CSV or Excel export</strong> here, or click to browse</div>
         </div>
         <input type="file" id="fileInput" accept=".csv,.tsv,.txt" style="display:none;">
-        <div class="hint">Expected columns (any order, case-insensitive): subject, customer, channel, status, priority, assignee, created_at. Unrecognized columns are ignored.</div>
+        <div class="hint">Expected columns (any order, case-insensitive): subject, customer, channel, status, priority, assignee, created_at. Optional: first_response_mins, resolution_hours, overdue. Unrecognized columns are ignored.</div>
         <div class="hint" id="uploadStatus"></div>
+      </div>
+
+      <div class="tab-panel" data-panel="airtable">
+        <div class="field">
+          <label for="atToken">Personal access token</label>
+          <input type="password" id="atToken" placeholder="pat…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="atBase">Base ID or Airtable URL</label>
+          <input type="text" id="atBase" placeholder="appXXXXXXXXXXXXXX or https://airtable.com/app…/tbl…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="atTable">Table name or ID</label>
+            <input type="text" id="atTable" placeholder="Inquiries" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="atView">View (optional)</label>
+            <input type="text" id="atView" placeholder="Grid view" autocomplete="off">
+          </div>
+        </div>
+        <details class="mapping">
+          <summary>Field mapping (optional)</summary>
+          <div class="hint" style="margin-top:0;margin-bottom:8px;">Fields are auto-detected by name. Type your Airtable field names here only if detection misses one.</div>
+          <div class="grid-2">
+            <div class="field"><label for="atMapSubject">Subject</label><input type="text" id="atMapSubject" autocomplete="off"></div>
+            <div class="field"><label for="atMapCustomer">Customer</label><input type="text" id="atMapCustomer" autocomplete="off"></div>
+            <div class="field"><label for="atMapChannel">Channel</label><input type="text" id="atMapChannel" autocomplete="off"></div>
+            <div class="field"><label for="atMapStatus">Status</label><input type="text" id="atMapStatus" autocomplete="off"></div>
+            <div class="field"><label for="atMapPriority">Priority</label><input type="text" id="atMapPriority" autocomplete="off"></div>
+            <div class="field"><label for="atMapAssignee">Assignee</label><input type="text" id="atMapAssignee" autocomplete="off"></div>
+            <div class="field"><label for="atMapCreated">Created date</label><input type="text" id="atMapCreated" autocomplete="off"></div>
+          </div>
+        </details>
+        <div class="hint">Create a token at airtable.com/create/tokens with the <b>data.records:read</b> scope and access to this base. It stays in this tab's memory only, is sent only to api.airtable.com, and is never saved. Linked-record fields return record IDs, so use a lookup field for names.</div>
+        <div class="hint" id="atStatus" role="status"></div>
       </div>
 
       <div class="tab-panel" data-panel="sheets">
@@ -491,8 +536,9 @@
   const setIcon=(id,name)=>{const el=document.getElementById(id); if(el) el.innerHTML=ICONS[name];};
 
   /* ---------------- Sample data ---------------- */
-  const CHANNELS=['Email','Chat','Phone','Social'];
-  const CHANNEL_COLOR={Email:'var(--series-1)',Chat:'var(--series-2)',Phone:'var(--series-3)',Social:'var(--series-4)'};
+  const CHANNELS=['Email','Chat','Phone','Social','Other'];
+  const CHANNEL_COLOR={Email:'var(--series-1)',Chat:'var(--series-2)',Phone:'var(--series-3)',Social:'var(--series-4)',Other:'var(--series-5)'};
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const PRIORITIES=['Urgent','High','Medium','Low'];
   const PRIORITY_COLOR={Urgent:'var(--status-critical)',High:'var(--status-serious)',Medium:'var(--status-warning)',Low:'var(--status-good)'};
   const STATUSES=['Open','Pending','Resolved','Closed'];
@@ -514,7 +560,7 @@
         id:'INQ-'+(1000+i),
         subject:pick(SUBJECTS),
         customer:pick(CUSTOMERS),
-        channel:pick(CHANNELS),
+        channel:pick(CHANNELS.slice(0,4)),
         priority:pick(PRIORITIES),
         status,
         assignee:pick(AGENTS),
@@ -529,6 +575,19 @@
   }
 
   let DATA=genInquiries(64,30);
+  let SOURCE={label:'Demo data (generated)', at:new Date()};
+
+  function setSource(src){ SOURCE=Object.assign({at:new Date()},src); renderSourceBar(); }
+  function renderSourceBar(){
+    const bar=document.getElementById('sourceBar'); bar.textContent='';
+    const add=(txt,tag)=>{ const el=document.createElement(tag||'span'); el.textContent=txt; bar.appendChild(el); };
+    add('Source:'); add(SOURCE.label,'b'); add('· '+DATA.length+' records');
+    add('· updated '+SOURCE.at.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}));
+    if(SOURCE.note) add('· '+SOURCE.note);
+    const btn=(txt,fn)=>{ const b=document.createElement('button'); b.className='link-btn'; b.textContent=txt; b.addEventListener('click',fn); bar.appendChild(b); };
+    if(SOURCE.refresh) btn('Refresh',SOURCE.refresh);
+    if(SOURCE.disconnect) btn('Disconnect',SOURCE.disconnect);
+  }
 
   /* ---------------- Rendering helpers ---------------- */
   const fmtDate=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
@@ -545,14 +604,15 @@
     const open=DATA.filter(d=>d.status==='Open'||d.status==='Pending').length;
     const overdue=DATA.filter(d=>d.overdue).length;
     const responded=DATA.filter(d=>d.firstResponseMins!=null);
-    const avgFirst=responded.length? Math.round(responded.reduce((a,d)=>a+d.firstResponseMins,0)/responded.length):0;
-    const resolvedCount=DATA.filter(d=>d.status==='Resolved'||d.status==='Closed').length;
+    const avgFirst=responded.length? Math.round(responded.reduce((a,d)=>a+d.firstResponseMins,0)/responded.length):null;
     const slaPct = total? Math.round(((total-overdue)/total)*100):100;
 
     const kpis=[
-      {label:'Total inquiries',value:total,note:'last 30 days',cls:'', dot:'var(--series-1)'},
+      {label:'Total inquiries',value:total,note:'in loaded data',cls:'', dot:'var(--series-1)'},
       {label:'Open & pending',value:open,note:open+' need attention',cls:'', dot:'var(--status-warning)'},
-      {label:'Avg first response',value:avgFirst+'m',note:avgFirst<=60?'within target':'above 60m target',cls:avgFirst<=60?'good':'bad',dot:'var(--status-good)'},
+      avgFirst==null
+        ? {label:'Avg first response',value:'—',note:'no response-time data',cls:'',dot:'var(--text-muted)'}
+        : {label:'Avg first response',value:avgFirst+'m',note:avgFirst<=60?'within target':'above 60m target',cls:avgFirst<=60?'good':'bad',dot:'var(--status-good)'},
       {label:'SLA compliance',value:slaPct+'%',note:overdue+' breached SLA',cls:slaPct>=90?'good':'bad',dot: slaPct>=90?'var(--status-good)':'var(--status-critical)'}
     ];
     document.getElementById('kpiRow').innerHTML=kpis.map(k=>`
@@ -608,7 +668,7 @@
 
   /* ---- Channel bar chart ---- */
   function renderChannelChart(){
-    const counts=CHANNELS.map(c=>({name:c, n:DATA.filter(d=>d.channel===c).length}));
+    const counts=CHANNELS.map(c=>({name:c, n:DATA.filter(d=>d.channel===c).length})).filter(c=>c.name!=='Other'||c.n>0);
     const max=Math.max(...counts.map(c=>c.n),1);
     document.getElementById('channelChart').innerHTML=counts.map(c=>`
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
@@ -634,22 +694,23 @@
 
   /* ---- Agent workload (shared by overview mini + team full) ---- */
   function agentStats(){
-    return AGENTS.map(name=>{
+    return [...new Set(DATA.map(d=>d.assignee))].map(name=>{
       const mine=DATA.filter(d=>d.assignee===name);
       const open=mine.filter(d=>d.status==='Open'||d.status==='Pending').length;
-      const resolved=mine.filter(d=>d.status==='Resolved'||d.status==='Closed');
-      const avgRes=resolved.length? Math.round(resolved.reduce((a,d)=>a+(d.resolutionHours||0),0)/resolved.length):0;
+      const timed=mine.filter(d=>d.resolutionHours!=null);
+      const avgRes=timed.length? Math.round(timed.reduce((a,d)=>a+d.resolutionHours,0)/timed.length):null;
       return {name, total:mine.length, open, avgRes};
     }).sort((a,b)=>b.open-a.open);
   }
+  const fmtHours=h=>h==null?'—':h+'h';
 
   function renderAgentChart(targetId, full){
-    const stats=agentStats();
+    const stats=agentStats().slice(0, full?60:8);
     const max=Math.max(...stats.map(s=>s.open),1);
     document.getElementById(targetId).innerHTML=stats.map(s=>`
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:${full?14:10}px;">
-        <div style="width:${full?110:70}px;font-size:12px;color:var(--text-secondary);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div>
-        <div class="agent-bar-track" style="flex:1;height:${full?12:10}px;" data-agent="${s.name}">
+        <div style="width:${full?110:70}px;font-size:12px;color:var(--text-secondary);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.name)}</div>
+        <div class="agent-bar-track" style="flex:1;height:${full?12:10}px;" data-agent="${esc(s.name)}">
           <div class="agent-bar-fill" style="width:${(s.open/max*100).toFixed(1)}%;height:100%;background:var(--series-1);"></div>
         </div>
         <div style="width:22px;text-align:right;font-size:12px;font-weight:700;">${s.open}</div>
@@ -657,7 +718,7 @@
     document.querySelectorAll(`#${targetId} [data-agent]`).forEach(el=>{
       el.addEventListener('mousemove',e=>{
         const s=stats.find(x=>x.name===el.dataset.agent);
-        showTooltip(e.clientX,e.clientY,s.name,[[`${s.open} open of ${s.total} total`,'var(--series-1)'],[`${s.avgRes}h avg resolution`,'var(--text-muted)']]);
+        showTooltip(e.clientX,e.clientY,s.name,[[`${s.open} open of ${s.total} total`,'var(--series-1)'],[`${fmtHours(s.avgRes)} avg resolution`,'var(--text-muted)']]);
       });
       el.addEventListener('mouseleave',hideTooltip);
     });
@@ -667,9 +728,9 @@
     const stats=agentStats();
     document.getElementById('agentList').innerHTML=stats.map(s=>`
       <div class="agent-row">
-        <div class="agent-avatar">${initials(s.name)}</div>
+        <div class="agent-avatar">${esc(initials(s.name))}</div>
         <div style="min-width:110px;">
-          <div class="agent-name">${s.name}</div>
+          <div class="agent-name">${esc(s.name)}</div>
           <div class="agent-sub">${s.total} total inquiries</div>
         </div>
         <div class="agent-bar-wrap">
@@ -677,7 +738,7 @@
         </div>
         <div class="agent-stats">
           <div class="agent-stat"><b>${s.open}</b><span>Open</span></div>
-          <div class="agent-stat"><b>${s.avgRes}h</b><span>Avg res.</span></div>
+          <div class="agent-stat"><b>${fmtHours(s.avgRes)}</b><span>Avg res.</span></div>
         </div>
       </div>`).join('');
   }
@@ -705,33 +766,33 @@
     document.getElementById('resultCount').textContent=`${rows.length} of ${DATA.length}`;
     document.getElementById('inqTableBody').innerHTML=rows.map(d=>`
       <tr>
-        <td class="subject-cell" title="${d.subject}">${d.subject}</td>
-        <td>${d.customer}</td>
-        <td>${d.channel}</td>
-        <td><span class="pri-dot" style="background:${PRIORITY_COLOR[d.priority]}"></span>${d.priority}</td>
+        <td class="subject-cell" title="${esc(d.subject)}">${esc(d.subject)}</td>
+        <td>${esc(d.customer)}</td>
+        <td>${esc(d.channel)}</td>
+        <td><span class="pri-dot" style="background:${PRIORITY_COLOR[d.priority]}"></span>${esc(d.priority)}</td>
         <td><span class="badge ${statusBadgeClass(d.status,d.overdue)}">${d.overdue?'Overdue':d.status}</span></td>
-        <td><span class="avatar">${initials(d.assignee)}</span>${d.assignee}</td>
+        <td><span class="avatar">${esc(initials(d.assignee))}</span>${esc(d.assignee)}</td>
         <td>${fmtDate(d.createdAt)}</td>
       </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">No inquiries match these filters.</td></tr>`;
 
     document.getElementById('inqCards').innerHTML=rows.map(d=>`
       <div class="inq-card">
         <div class="inq-card-top">
-          <div class="inq-card-subject">${d.subject}</div>
+          <div class="inq-card-subject">${esc(d.subject)}</div>
           <span class="badge ${statusBadgeClass(d.status,d.overdue)}">${d.overdue?'Overdue':d.status}</span>
         </div>
         <div class="inq-card-meta">
-          <span>${d.customer}</span>
-          <span>${d.channel}</span>
-          <span><span class="pri-dot" style="background:${PRIORITY_COLOR[d.priority]}"></span>${d.priority}</span>
-          <span>${d.assignee}</span>
+          <span>${esc(d.customer)}</span>
+          <span>${esc(d.channel)}</span>
+          <span><span class="pri-dot" style="background:${PRIORITY_COLOR[d.priority]}"></span>${esc(d.priority)}</span>
+          <span>${esc(d.assignee)}</span>
           <span>${fmtDate(d.createdAt)}</span>
         </div>
       </div>`).join('') || `<div style="text-align:center;color:var(--text-muted);padding:24px;">No inquiries match these filters.</div>`;
   }
 
   function renderAll(){
-    renderKPIs(); renderVolumeChart(); renderChannelChart();
+    renderSourceBar(); renderKPIs(); renderVolumeChart(); renderChannelChart();
     renderAgentChart('miniAgentChart',false); renderAgentChart('agentChart',true); renderAgentList();
     renderInquiries();
   }
@@ -739,7 +800,7 @@
   /* ---------------- Tooltip ---------------- */
   const tooltipEl=document.getElementById('tooltip');
   function showTooltip(x,y,title,rows){
-    tooltipEl.innerHTML=`<div class="tooltip-title">${title}</div>`+rows.map(r=>`<div class="tooltip-row"><span class="legend-swatch" style="background:${r[1]}"></span>${r[0]}</div>`).join('');
+    tooltipEl.innerHTML=`<div class="tooltip-title">${esc(title)}</div>`+rows.map(r=>`<div class="tooltip-row"><span class="legend-swatch" style="background:${r[1]}"></span>${esc(r[0])}</div>`).join('');
     const rect=tooltipEl.getBoundingClientRect();
     let left=x+14, top=y+14;
     if(left+220>window.innerWidth) left=x-220;
@@ -808,37 +869,228 @@
   });
 
   /* CSV parsing (upload tab is the one real connector) */
+  const normKey=k=>String(k).trim().toLowerCase().replace(/[\s\-]+/g,'_');
+
   function parseCSV(text){
-    const lines=text.split(/\r?\n/).filter(l=>l.trim().length);
-    if(!lines.length) return [];
-    const splitLine=l=>l.match(/(".*?"|[^,]+)(?=,|$)/g).map(s=>s.replace(/^"|"$/g,'').trim());
-    const headers=splitLine(lines[0]).map(h=>h.toLowerCase());
-    return lines.slice(1).map(l=>{
-      const cells=splitLine(l);
+    const rows=[]; let row=[], cell='', q=false;
+    for(let i=0;i<text.length;i++){
+      const c=text[i];
+      if(q){
+        if(c==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; }
+        else cell+=c;
+      } else if(c==='"') q=true;
+      else if(c===','){ row.push(cell); cell=''; }
+      else if(c==='\n'||c==='\r'){
+        if(c==='\r'&&text[i+1]==='\n') i++;
+        row.push(cell); cell='';
+        if(row.some(x=>x.trim()!=='')) rows.push(row);
+        row=[];
+      } else cell+=c;
+    }
+    row.push(cell); if(row.some(x=>x.trim()!=='')) rows.push(row);
+    if(rows.length<2) return [];
+    const headers=rows[0].map(normKey);
+    return rows.slice(1).map(cells=>{
+      const o={}; headers.forEach((h,i)=>{ o[h]=(cells[i]||'').trim(); }); return o;
+    });
+  }
+
+  const FIELD_ALIASES={
+    id:['id','ticket_id','record_id'],
+    subject:['subject','title','summary','topic','inquiry','issue'],
+    customer:['customer','customer_name','requester','contact','client','name'],
+    channel:['channel','source','medium'],
+    status:['status','state','stage'],
+    priority:['priority','urgency','severity'],
+    assignee:['assignee','agent','assigned_to','owner'],
+    created:['created_at','created','date','submitted','received','opened_at','created_time'],
+    firstResponseMins:['first_response_mins','first_response_minutes'],
+    firstResponseAt:['first_response_at','first_responded_at'],
+    resolutionHours:['resolution_hours','resolution_time_hours'],
+    resolvedAt:['resolved_at','closed_at'],
+    overdue:['overdue','sla_breached','breached']
+  };
+  const MAPPABLE=['subject','customer','channel','status','priority','assignee','created'];
+
+  function normStatus(v){
+    const t=String(v||'').toLowerCase();
+    if(!t) return 'Open';
+    if(/unresolv|not (yet )?resolv/.test(t)) return 'Open';
+    if(/clos/.test(t)) return 'Closed';
+    if(/resolv|done|complet|solved|fixed/.test(t)) return 'Resolved';
+    if(/pend|wait|hold|progress|assign|escalat|review|snooz/.test(t)) return 'Pending';
+    return 'Open';
+  }
+  function normPriority(v){
+    const t=String(v||'').toLowerCase();
+    if(/urgent|critical|blocker|\bp0\b|\bp1\b/.test(t)) return 'Urgent';
+    if(/high|major|\bp2\b/.test(t)) return 'High';
+    if(/low|minor|trivial|\bp4\b/.test(t)) return 'Low';
+    return 'Medium';
+  }
+  function normChannel(v){
+    const t=String(v||'').toLowerCase();
+    if(/mail/.test(t)) return 'Email';
+    if(/chat|live|messag|whatsapp|sms|intercom/.test(t)) return 'Chat';
+    if(/phone|call|voice|tel/.test(t)) return 'Phone';
+    if(/social|twitter|facebook|instagram|linkedin|tiktok/.test(t)) return 'Social';
+    return 'Other';
+  }
+  const num=v=>{ const n=parseFloat(v); return isFinite(n)?n:null; };
+  const truthy=v=>v===true||/^(true|yes|y|1|checked|breached)$/i.test(String(v).trim());
+
+  function rowsToInquiries(rows, overrides){
+    overrides=overrides||{};
+    const present=new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>present.add(k)));
+    const used={}, keys={};
+    Object.keys(FIELD_ALIASES).forEach(n=>{
+      const ov=overrides[n]?normKey(overrides[n]):null;
+      const hit=ov||FIELD_ALIASES[n].find(a=>present.has(a));
+      if(hit){ keys[n]=hit; used[n]=hit; }
+    });
+    let badDates=0;
+    const inquiries=rows.map((r,i)=>{
+      const val=n=>{ const k=keys[n]; if(!k) return undefined; const v=r[k]; return (v===undefined||v===null||v==='')?undefined:v; };
+      let created=val('created')!==undefined? new Date(val('created')) : null;
+      if(!created||isNaN(created)){ created=new Date(); badDates++; }
+      const status=normStatus(val('status'));
+      const done=status==='Resolved'||status==='Closed';
+      let firstResponseMins=num(val('firstResponseMins'));
+      if(firstResponseMins==null&&val('firstResponseAt')!==undefined){
+        const ms=new Date(val('firstResponseAt'))-created; if(isFinite(ms)&&ms>=0) firstResponseMins=Math.round(ms/60000);
+      }
+      let resolutionHours=num(val('resolutionHours'));
+      if(resolutionHours==null&&val('resolvedAt')!==undefined){
+        const ms=new Date(val('resolvedAt'))-created; if(isFinite(ms)&&ms>=0) resolutionHours=Math.round(ms/3600000);
+      }
+      const overdue=val('overdue')!==undefined? truthy(val('overdue')) : (!done && Date.now()-created.getTime()>4*86400000);
+      return {
+        id:String(val('id')||('INQ-'+(i+1))),
+        subject:String(val('subject')||'Untitled inquiry'),
+        customer:String(val('customer')||'Unknown'),
+        channel:normChannel(val('channel')),
+        priority:normPriority(val('priority')),
+        status,
+        assignee:String(val('assignee')||'Unassigned'),
+        createdAt:created,
+        firstResponseMins, resolutionHours, overdue
+      };
+    });
+    inquiries.sort((a,b)=>b.createdAt-a.createdAt);
+    const notes=[];
+    const missing=MAPPABLE.filter(n=>!used[n]);
+    if(missing.length) notes.push('not found, defaults used: '+missing.join(', '));
+    if(!used.overdue) notes.push('overdue = open more than 4 days');
+    if(badDates) notes.push(badDates+' rows had no readable date');
+    return {inquiries, used, notes};
+  }
+
+  /* ---------------- Airtable ---------------- */
+  const AT_MAX_RECORDS=5000;
+  const AT_STORE='csd-airtable';
+
+  function flattenAirtable(v){
+    if(v==null) return '';
+    if(Array.isArray(v)) return v.map(flattenAirtable).filter(x=>x!=='').join(', ');
+    if(typeof v==='object') return v.name!=null? v.name : (v.email!=null? v.email : (v.text!=null? v.text : ''));
+    return v;
+  }
+  function airtableErrorMessage(status, detail){
+    const map={
+      401:'Airtable rejected the token (401). Check it was copied in full and has not been revoked.',
+      403:'The token does not have access (403). It needs the data.records:read scope and access to this base.',
+      404:'Base or table not found (404). Check the base ID and the table name or ID.',
+      429:'Airtable rate limit reached (429). Wait a moment and try again.'
+    };
+    if(status==='network') return 'Could not reach api.airtable.com. Check your connection. Inside the Claude artifact preview, outbound requests are blocked: open the GitHub Pages site or the local file instead.';
+    return (map[status]||('Airtable returned an error ('+status+').'))+(detail&&!map[status]?' '+detail:'');
+  }
+  async function fetchAirtableRecords(cfg, onProgress){
+    const url0=`https://api.airtable.com/v0/${encodeURIComponent(cfg.baseId)}/${encodeURIComponent(cfg.table)}`;
+    const records=[]; let offset, truncated=false;
+    do{
+      const p=new URLSearchParams({pageSize:'100'});
+      if(cfg.view) p.set('view',cfg.view);
+      if(offset) p.set('offset',offset);
+      let res;
+      try{ res=await fetch(url0+'?'+p, {headers:{Authorization:'Bearer '+cfg.token}}); }
+      catch(e){ throw new Error(airtableErrorMessage('network')); }
+      if(!res.ok){
+        let detail=''; try{ const j=await res.json(); detail=(j&&j.error&&(j.error.message||j.error.type))||''; }catch(e){}
+        throw new Error(airtableErrorMessage(res.status, detail));
+      }
+      const json=await res.json();
+      records.push(...(json.records||[]));
+      offset=json.offset;
+      if(onProgress) onProgress(records.length);
+      if(records.length>=AT_MAX_RECORDS&&offset){ truncated=true; break; }
+    }while(offset);
+    return {records, truncated};
+  }
+  function airtableRecordsToRows(records){
+    return records.map(rec=>{
       const row={};
-      headers.forEach((h,i)=>row[h]=cells[i]||'');
+      Object.keys(rec.fields||{}).forEach(k=>{ row[normKey(k)]=flattenAirtable(rec.fields[k]); });
+      if(!('record_id' in row)) row.record_id=rec.id;
+      if(!('created_time' in row)) row.created_time=rec.createdTime;
       return row;
     });
   }
-  function rowsToInquiries(rows){
-    return rows.map((r,i)=>{
-      const get=(...keys)=>{ for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return undefined; };
-      const created = get('created_at','created','date') ? new Date(get('created_at','created','date')) : new Date();
-      const status = STATUSES.find(s=>s.toLowerCase()===String(get('status')||'').toLowerCase()) || pick(STATUSES);
-      const channel = CHANNELS.find(c=>c.toLowerCase()===String(get('channel')||'').toLowerCase()) || pick(CHANNELS);
-      const priority = PRIORITIES.find(p=>p.toLowerCase()===String(get('priority')||'').toLowerCase()) || pick(PRIORITIES);
-      return {
-        id:get('id')||('INQ-'+(2000+i)),
-        subject:get('subject','title')||'Untitled inquiry',
-        customer:get('customer','customer_name','name')||'Unknown',
-        channel, priority, status,
-        assignee:get('assignee','agent')||pick(AGENTS),
-        createdAt: isNaN(created)? new Date():created,
-        firstResponseMins: status==='Open'?null:Math.round(10+rnd()*180),
-        resolutionHours: (status==='Resolved'||status==='Closed')?Math.round(1+rnd()*60):null,
-        overdue: status!=='Resolved' && status!=='Closed' && rnd()>0.75
-      };
-    });
+  function parseAirtableRef(baseInput, tableInput, viewInput){
+    const b=baseInput.trim(), m=b.match(/(app[A-Za-z0-9]{14})/);
+    if(!m) throw new Error('Base ID should look like appXXXXXXXXXXXXXX (find it in your base URL).');
+    let table=tableInput.trim(), view=viewInput.trim();
+    const t=b.match(/\/(tbl[A-Za-z0-9]{14})/), v=b.match(/\/(viw[A-Za-z0-9]{14})/);
+    if(!table&&t) table=t[1];
+    if(!view&&v) view=v[1];
+    if(!table) throw new Error('Enter the table name or ID.');
+    return {baseId:m[1], table, view};
+  }
+  function airtableMapping(){
+    const ids={subject:'atMapSubject',customer:'atMapCustomer',channel:'atMapChannel',status:'atMapStatus',priority:'atMapPriority',assignee:'atMapAssignee',created:'atMapCreated'};
+    const out={}; Object.keys(ids).forEach(n=>{ const v=document.getElementById(ids[n]).value.trim(); if(v) out[n]=v; });
+    return out;
+  }
+  async function connectAirtable(cfg, silent){
+    const status=document.getElementById('atStatus');
+    const say=(msg,isErr)=>{ if(silent){ toast(msg); } else { status.textContent=msg; status.classList.toggle('error',!!isErr); } };
+    say('Connecting to Airtable…');
+    try{
+      const {records,truncated}=await fetchAirtableRecords(cfg, n=>say('Loaded '+n+' records…'));
+      if(!records.length) throw new Error('That table returned no records.');
+      const rows=airtableRecordsToRows(records);
+      const result=rowsToInquiries(rows, cfg.mapping);
+      DATA=result.inquiries;
+      const notes=result.notes.slice();
+      ['customer','assignee','subject'].forEach(n=>{
+        const k=result.used[n];
+        if(k&&rows.slice(0,20).some(r=>/^rec[A-Za-z0-9]{14}$/.test(String(r[k]).split(', ')[0]))) notes.push(n+' looks like linked-record IDs (add a lookup field)');
+      });
+      if(truncated) notes.push('showing first '+AT_MAX_RECORDS+' records');
+      setSource({
+        label:'Airtable · '+cfg.table, note:notes.join('; '),
+        refresh:()=>connectAirtable(cfg,true),
+        disconnect:()=>{ cfg.token=''; DATA=genInquiries(64,30); setSource({label:'Demo data (generated)'}); renderAll(); toast('Disconnected from Airtable'); }
+      });
+      renderAll();
+      if(!silent){ closeModal(); toast('Connected to Airtable — loaded '+DATA.length+' inquiries'); }
+      else toast('Refreshed from Airtable — '+DATA.length+' inquiries');
+      return true;
+    }catch(err){
+      say(err.message,true);
+      return false;
+    }
+  }
+  function loadAirtableForm(){
+    try{
+      const s=JSON.parse(localStorage.getItem(AT_STORE)||'null'); if(!s) return;
+      document.getElementById('atBase').value=s.baseId||''; document.getElementById('atTable').value=s.table||''; document.getElementById('atView').value=s.view||'';
+      const ids={subject:'atMapSubject',customer:'atMapCustomer',channel:'atMapChannel',status:'atMapStatus',priority:'atMapPriority',assignee:'atMapAssignee',created:'atMapCreated'};
+      Object.keys(ids).forEach(n=>{ document.getElementById(ids[n]).value=(s.mapping&&s.mapping[n])||''; });
+    }catch(e){}
+  }
+  function saveAirtableForm(cfg){
+    try{ localStorage.setItem(AT_STORE, JSON.stringify({baseId:cfg.baseId,table:cfg.table,view:cfg.view,mapping:cfg.mapping})); }catch(e){}
   }
 
   const dropzone=document.getElementById('dropzone');
@@ -862,8 +1114,10 @@
       try{
         const rows=parseCSV(String(ev.target.result));
         if(!rows.length) throw new Error('empty');
-        DATA=rowsToInquiries(rows);
+        const result=rowsToInquiries(rows);
+        DATA=result.inquiries;
         status.textContent=`Loaded ${DATA.length} rows from ${file.name}.`;
+        setSource({label:'File · '+file.name, note:result.notes.join('; ')});
         renderAll();
         closeModal();
         toast(`Connected — loaded ${DATA.length} inquiries from ${file.name}`);
@@ -878,11 +1132,29 @@
   document.getElementById('doConnect').addEventListener('click', ()=>{
     const activeTab=document.querySelector('.tab-btn.active').dataset.tab;
     if(activeTab==='upload'){ fileInput.click(); return; }
+    if(activeTab==='airtable'){
+      const status=document.getElementById('atStatus');
+      const tokenEl=document.getElementById('atToken');
+      const token=tokenEl.value.trim();
+      let cfg;
+      try{
+        if(!token) throw new Error('Paste your Airtable personal access token.');
+        cfg=Object.assign(parseAirtableRef(document.getElementById('atBase').value, document.getElementById('atTable').value, document.getElementById('atView').value), {token, mapping:airtableMapping()});
+      }catch(err){ status.textContent=err.message; status.classList.add('error'); return; }
+      const btn=document.getElementById('doConnect');
+      btn.disabled=true;
+      connectAirtable(cfg,false).then(ok=>{
+        btn.disabled=false;
+        if(ok){ tokenEl.value=''; saveAirtableForm(cfg); status.textContent=''; }
+      });
+      return;
+    }
     const labels={sheets:'Google Sheets', helpdesk:document.getElementById('helpdeskPlatform').value, rest:'REST endpoint'};
     const btn=document.getElementById('doConnect');
     btn.textContent='Connecting…'; btn.disabled=true;
     setTimeout(()=>{
       DATA=genInquiries(50+Math.floor(rnd()*30), 30);
+      setSource({label:labels[activeTab]+' (demo data — not a live connection)'});
       renderAll();
       btn.textContent='Connect'; btn.disabled=false;
       closeModal();
@@ -966,6 +1238,7 @@
   setIcon('icon-connect-top','link');
   setIcon('icon-upload','upload');
   setIcon('icon-export','download');
+  loadAirtableForm();
   applyTheme(currentTheme());
   setIcon('themeToggleMobile', (document.documentElement.getAttribute('data-theme')==='dark' || (!currentTheme() && window.matchMedia('(prefers-color-scheme: dark)').matches))?'sun':'moon');
 
